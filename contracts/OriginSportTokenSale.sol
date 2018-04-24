@@ -63,6 +63,7 @@ contract OriginSportTokenSale is Ownable{
    */
   function buyTokens(address _beneficiary) public payable inProgress {
     require(msg.value >= MINIMAL_CONTRIBUTION);
+    require(!hardCapReached());
     uint amount = msg.value;
     amountRaised = amountRaised.add(amount);
     uint rate = getRate();

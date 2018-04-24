@@ -1,19 +1,20 @@
 pragma solidity 0.4.19;
 
 import 'zeppelin-solidity/contracts/token/ERC20/StandardToken.sol';
+import 'zeppelin-solidity/contracts/token/ERC20/BurnableToken.sol';
 import 'zeppelin-solidity/contracts/math/SafeMath.sol';
 import 'zeppelin-solidity/contracts/ownership/Ownable.sol';
 
-contract OriginSportToken is StandardToken, Ownable {
+contract OriginSportToken is StandardToken, Ownable, BurnableToken {
   using SafeMath for uint;
 
   // Events
   event Burn(address indexed _burner, uint _value);
 
   // Constants
-  string public name                = 'Origin Sport Token';
-  string public symbol              = 'ORS';
-  uint public constant decimal      = 18;
+  string public constant name       = 'Origin Sport Token';
+  string public constant symbol     = 'ORS';
+  uint   public constant decimal    = 18;
 
   // Properties
   uint public totalSupply           = 300000000 * 10 ** uint(decimal);
@@ -79,33 +80,8 @@ contract OriginSportToken is StandardToken, Ownable {
   /**
    * @dev burn tokens
    * @param _value The amount to be burned.
-   * @return always true (necessary in case of override)
    */
-  function burn(uint _value) public onlyWhenTransferEnabled returns (bool) {
-    balances[msg.sender] = balances[msg.sender].sub(_value);
-    totalSupply = totalSupply.sub(_value);
-    Burn(msg.sender, _value);
-    Transfer(msg.sender, address(0x0), _value);
-    return true;
-  }
-
-  /**
-   * @dev burn tokens in the behalf of someone
-   * @param _from The address of the owner of the token.
-   * @param _value The amount to be burned.
-   * @return always true (necessary in case of override)
-   */
-  function burnFrom(address _from, uint _value) public onlyWhenTransferEnabled returns(bool) {
-    require(transferFrom(_from, msg.sender, _value));
-    return burn(_value);
-  }
-
-  /**
-   * @dev transfer to owner any tokens send by mistake on this contracts
-   * @param token The address of the token to transfer.
-   * @param amount The amount to be transfered.
-   */
-  function emergencyERC20Drain(ERC20 token, uint amount) public onlyOwner {
-    token.transfer(owner, amount);
+  function burn(uint _value) public onlyWhenTransferEnabled {
+    super.burn(_value);
   }
 }

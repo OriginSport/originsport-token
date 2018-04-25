@@ -12,12 +12,12 @@ contract OriginSportToken is StandardToken, Ownable, BurnableToken {
   event Burn(address indexed _burner, uint _value);
 
   // Constants
-  string public constant name       = 'Origin Sport Token';
-  string public constant symbol     = 'ORS';
-  uint   public constant decimal    = 18;
+  string public constant name           = 'Origin Sport Token';
+  string public constant symbol         = 'ORS';
+  uint   public constant decimal        = 18;
+  uint   public constant INITIAL_SUPPLY = 300000000 * 10 ** uint(decimal);
 
   // Properties
-  uint public totalSupply           = 300000000 * 10 ** uint(decimal);
   uint public transferableStartTime;
   address public  tokenSaleContract;
 
@@ -41,8 +41,9 @@ contract OriginSportToken is StandardToken, Ownable, BurnableToken {
    * @param _admin the admin address of ors
    */
   function OriginSportToken(uint _transferableStartTime, address _admin) public {
-    balances[msg.sender] = totalSupply;
-    Transfer(address(0x0), msg.sender, totalSupply);
+    totalSupply_ = INITIAL_SUPPLY;
+    balances[msg.sender] = totalSupply_;
+    Transfer(address(0x0), msg.sender, totalSupply_);
 
     transferableStartTime = _transferableStartTime;
     tokenSaleContract = msg.sender;
@@ -78,7 +79,7 @@ contract OriginSportToken is StandardToken, Ownable, BurnableToken {
   }
 
   /**
-   * @dev burn tokens
+   * @dev overrides burn function with modifier to prevent burn while untransferable
    * @param _value The amount to be burned.
    */
   function burn(uint _value) public onlyWhenTransferEnabled {

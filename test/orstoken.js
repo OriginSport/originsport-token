@@ -1,3 +1,4 @@
+const BigNumber = require('bignumber.js')
 const { addsDayOnEVM, assertRevert } = require('./helpers')
 
 const OriginSportToken = artifacts.require('./OriginSportToken.sol')
@@ -37,21 +38,11 @@ contract('OriginSportToken', function(accounts) {
     assert.strictEqual(symbol, 'ORS')
   })
 
-  // Burn
-  it("burn: total supply would decrease to 200 million", async () => {
-    const totalSupply = await tokenInstance.totalSupply()
-    assert.equal(totalSupply, TOTAL_SUPPLY, "total supply should have 300 million tokens")
- 
-    await tokenInstance.burn(1e26, { from: owner })
-    const _totalSupply = await tokenInstance.totalSupply()
-    assert.equal(_totalSupply, TOTAL_SUPPLY-1e26, "total supply should equal 200 million tokens")
-  })
-
   // TRANSERS
   // normal transfers without approvals
   it('transfers: ether transfer should be reversed.', async () => {
     const balanceBefore = (await tokenInstance.balanceOf(owner)).toNumber()
-    assert.equal(balanceBefore, TOTAL_SUPPLY)
+    assert.equal(balanceBefore, TOTAL_SUPPLY, "before transaction balance is already not correct")
 
     await assertRevert(new Promise((resolve, reject) => {
       web3.eth.sendTransaction({ from: owner, to: tokenInstance.address, value: web3.toWei('10', 'Ether') }, (err, res) => {
@@ -61,7 +52,7 @@ contract('OriginSportToken', function(accounts) {
     }))
 
     const balanceAfter = (await tokenInstance.balanceOf(owner)).toNumber()
-    assert.equal(balanceAfter, TOTAL_SUPPLY)
+    assert.equal(balanceAfter, TOTAL_SUPPLY, "after transaction balance is not correct")
   })
 
   it('transfers: should transfer 10000 to user1 with owner having 10000', async () => {
@@ -103,6 +94,22 @@ contract('OriginSportToken', function(accounts) {
 
     const _balance = await tokenInstance.balanceOf(owner)
     assert.equal(_balance.toNumber(), TOTAL_SUPPLY-20, 'owner balance not correct')
+  })
+
+  // Burn
+  it("burn: total supply would decrease to 200 million", async () => {
+    const supply0 = await tokenInstance.totalSupply()
+    const balance0 = await tokenInstance.balanceOf(owner)
+ 
+    const value = 1e26
+    await tokenInstance.burn(value, { from: owner })
+
+    const supply1 = await tokenInstance.totalSupply()
+    const balance1 = await tokenInstance.balanceOf(owner)
+ 
+    const _totalSupply = await tokenInstance.totalSupply()
+    assert.equal(supply0.minus(value), supply1.toNumber(), "after burn total supply is not correct")
+    assert.equal(balance0.minus(value), balance1.toNumber(), "after burn balance is not correct")
   })
 })
 

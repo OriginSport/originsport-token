@@ -4,7 +4,7 @@ import 'zeppelin-solidity/contracts/math/SafeMath.sol';
 import 'zeppelin-solidity/contracts/ownership/Ownable.sol';
 import './OriginSportToken.sol';
 
-contract OriginSportTokenSale is Ownable{
+contract OriginSportTokenSale is Ownable {
   using SafeMath for uint;
 
   // Constant

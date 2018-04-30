@@ -24,7 +24,7 @@ module.exports = function(deployer, network, accounts) {
 	console.log('publicSaleEndTime   : ' + publicSaleEndTime)
 	console.log('publicSaleEndTime   : ' + new Date(publicSaleEndTime*1000))
 	console.log('-------------------------------------------------')
-  deployer.deploy(OriginSportToken, publicSaleEndTime, accounts[0]).then(function() {
+  deployer.deploy(OriginSportToken, publicSaleEndTime, accounts[1]).then(function() {
     return deployer.deploy(OriginSportTokenSale, publicSaleStartTime, publicSaleEndTime)
   })
 }

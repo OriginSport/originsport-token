@@ -1,5 +1,5 @@
 const BigNumber = require('bignumber.js')
-const { addsDayOnEVM, assertRevert } = require('./helpers')
+const { addDaysOnEVM, assertRevert } = require('truffle-js-test-helper')
 
 const OriginSportToken = artifacts.require('./OriginSportToken.sol')
 
@@ -14,7 +14,7 @@ contract('OriginSportToken', function(accounts) {
   beforeEach(function() {
     return OriginSportToken.deployed().then(function(instance) {
       tokenInstance = instance
-      addsDayOnEVM(60);
+      addDaysOnEVM(60);
     })
   })
 

@@ -10,43 +10,48 @@ contract OriginSportTokenSale is Ownable {
   // Constant
   uint public constant decimal = 18;
   uint public constant AVAILABLE_TOTAL_SUPPLY    = 300000000 * 18 ** uint(decimal);
-  uint public constant AVAILABLE_PUBLIC_SUPPLY   = 135000000 * 18 ** uint(decimal); // 45%
+  uint public constant AVAILABLE_PUBLIC_SUPPLY   =  90000000 * 18 ** uint(decimal); // 30%
   uint public constant AVAILABLE_PRIVATE_SUPPLY  =  45000000 * 18 ** uint(decimal); // 15%
-  uint public constant MINIMAL_CONTRIBUTION      =         5 * 10 ** uint(decimal-1);
+  uint public constant MINIMAL_CONTRIBUTION      =         2 * 10 ** uint(decimal-1);
 
-  uint public constant GOAL                      = 21800 ether;
-  uint public constant HARD_CAP                  = 36000 ether;
+  uint public constant GOAL                      = 18000 ether;
+  uint public constant HARD_CAP                  = 30000 ether;
 
-  uint public constant   BASE_RATE               = 3000;
-  uint public constant ROUND1_RATE               = 3750; // 2018-05-15 - 20
-  uint public constant ROUND2_RATE               = 3450; // 2018-05-20 - 25
-  uint public constant ROUND3_RATE               = 3150; // 2018-05-25 - 30
+  uint public constant    BASE_RATE              = 3000;
+  uint public constant PRIVATE_RATE              = 4050; // 35% bonus, 2018-04-20 - 2018-05-20
+  uint public constant  ROUND1_RATE              = 3750; // 25% bonus, 2018-05-21 - 2018-05-26
+  uint public constant  ROUND2_RATE              = 3450; // 15% bonus, 2018-05-26 - 2018-05-31
+  uint public constant  ROUND3_RATE              = 3150; //  5% bonus, 2018-05-31 - 2018-06-05
 
   // Properties
-  uint public amountRaised;
+  uint public tokenSold;
+  uint public weiRaised;
   uint public startTime;
   uint public endTime;
-  bool public saleClosed;
+  bool public finalized;
+  address public wallet;
 
   OriginSportToken public token;
 
   // Modifiers
-  modifier beforeDeadline()   { require (now < endTime); _; }
-  modifier afterStartTime()   { require (now >= startTime); _; }
   modifier inProgress()       { require (now < endTime && now >= startTime); _; }
-  modifier saleNotClosed()    { require (!saleClosed); _; }
 
   // Events
-  event GoalReached(address addr, uint _amountRaised);
-  event HardCapReached(address addr, uint _amountRaised);
-  event LogContribute(address addr, uint _amount);
+  event LogContribute(address indexed addr, uint etherAmount, uint orsAmount);
+  event Finalized(uint tokenSold, uint weiRaised);
 
-
-  function OriginSportTokenSale(uint _startTime, uint _endTime) public {
+  /**
+   * @dev The construct function of tokensale
+   * @param _endTime - _startTime must greater than 10 days
+   *        because these are three rounds, each round interval is 5 days
+   */
+  function OriginSportTokenSale(uint _startTime, uint _endTime, address _token, address _wallet) public {
+    require(_endTime > _startTime + 10 days);
     require(_startTime >= now);
     startTime = _startTime;
     endTime = _endTime;
-    token = OriginSportToken(this);
+    token = OriginSportToken(_token);
+    wallet = _wallet;
   }
 
   /**
@@ -61,28 +66,32 @@ contract OriginSportTokenSale is Ownable {
    * @dev low level token purchase 
    * @param _beneficiary Address performing the token purchase
    */
-  function buyTokens(address _beneficiary) public payable inProgress {
+  function buyTokens(address _beneficiary) payable inProgress public {
     require(msg.value >= MINIMAL_CONTRIBUTION);
     require(!hardCapReached());
-    uint amount = msg.value;
-    amountRaised = amountRaised.add(amount);
+
     uint rate = getRate();
-    uint orsAmount = amount.mul(rate);
-    if (token.transfer(_beneficiary, orsAmount)) {
-      LogContribute(_beneficiary, amount);
-    } else {
-      revert();
+    uint orsAmount = msg.value.mul(rate);
+
+    token.transfer(_beneficiary, orsAmount);
+
+    weiRaised = weiRaised.add(msg.value);
+    tokenSold = tokenSold.add(orsAmount);
+    LogContribute(_beneficiary, msg.value, orsAmount);
+
+    if (tokenSold > HARD_CAP) {
+      finalizeSale();
     }
   }
 
   /**
-   * @dev get real rate with the time contribute transfer ether
+   * @dev get real rate with the time contributor transfer ether
    *
    */
-  function getRate() view public returns (uint _rate) {
+  function getRate() public view returns (uint _rate) {
     if (now < startTime + 5 days) {
       return ROUND1_RATE;
-    } else if (now >= startTime + 5 days && now < endTime - 5 days) {
+    } else if (now >= startTime + 5 days && now < startTime + 10 days) {
       return ROUND2_RATE;
     } else {
       return ROUND3_RATE;
@@ -93,11 +102,26 @@ contract OriginSportTokenSale is Ownable {
    * @dev return true if the hard cap is reached.
    *
    */
-  function hardCapReached() view public returns (bool) {
-      return amountRaised >= HARD_CAP;
+  function hardCapReached() public view returns (bool) {
+    return weiRaised >= HARD_CAP;
+  }
+
+  /**
+   * @dev execute the finalization process
+   *
+   */
+  function endSale() public {
+    require(!finalized);
+    require(now > endTime);
+    finalizeSale();
+  }
+
+  /**
+   * @dev finalize the token sale
+   *
+   */
+  function finalizeSale() internal {
+    finalized = true;
+    Finalized(tokenSold, weiRaised);
   }
 }
-
-
-
-

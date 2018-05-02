@@ -8,15 +8,36 @@ contract('OriginSportTokenSale Test', function(accounts) {
   var user1 = accounts[1]
   var user2 = accounts[2]
   var user3 = accounts[3]
+  var wallet = accounts[9]
 
-  before(function() {
-    return OriginSportTokenSale.deployed().then(function(instance) {
-        saleInstance = instance
-        return OriginSportToken.deployed()
-    }).then(function(instance){
-      tokenInstance = instance
-      return tokenInstance.totalSupply()
-    })
+  const publicSaleStartTime = new Date("May 21 2018 14:00:00 GMT+0800").getTime() / 1000 | 0
+  const publicSaleEndTime   = new Date("Jun 05 2018 14:00:00 GMT+0800").getTime() / 1000 | 0
+  
+  const decimal = 18
+  const tokenForPublicSale = 300000000 * 18 ** decimal
+
+  /* some build-in constant params to validate
+  uint public constant decimal = 18;
+  uint public constant AVAILABLE_TOTAL_SUPPLY    = 300000000 * 18 ** uint(decimal);
+  uint public constant AVAILABLE_PUBLIC_SUPPLY   =  90000000 * 18 ** uint(decimal); // 30%
+  uint public constant AVAILABLE_PRIVATE_SUPPLY  =  45000000 * 18 ** uint(decimal); // 15%
+  uint public constant MINIMAL_CONTRIBUTION      =         2 * 10 ** uint(decimal-1);
+
+  uint public constant GOAL                      = 18000 ether;
+  uint public constant HARD_CAP                  = 30000 ether;
+
+  uint public constant    BASE_RATE              = 3000;
+  uint public constant PRIVATE_RATE              = 4050; // 35% bonus, 2018-04-20 - 2018-05-20
+  uint public constant  ROUND1_RATE              = 3750; // 25% bonus, 2018-05-21 - 2018-05-26
+  uint public constant  ROUND2_RATE              = 3450; // 15% bonus, 2018-05-26 - 2018-05-31
+  uint public constant  ROUND3_RATE              = 3150; //  5% bonus, 2018-05-31 - 2018-06-05
+  */
+
+
+  before(async () => {
+    tokenInstance = await OriginSportToken.new(owner, publicSaleEndTime, {from: owner})
+    saleInstance  = await OriginSportTokenSale.new(publicSaleStartTime, publicSaleEndTime, tokenInstance.address, wallet)
+    await tokenInstance.transfer(saleInstance.address, tokenForPublicSale, {from: owner})
   })
 
   it("should be able to send tokens to user from crowdsale allowance", async function() {

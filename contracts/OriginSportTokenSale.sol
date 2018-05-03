@@ -2,9 +2,10 @@ pragma solidity 0.4.19;
 
 import 'zeppelin-solidity/contracts/math/SafeMath.sol';
 import 'zeppelin-solidity/contracts/ownership/Ownable.sol';
+import 'zeppelin-solidity/contracts/lifecycle/Pausable.sol';
 import './OriginSportToken.sol';
 
-contract OriginSportTokenSale is Ownable {
+contract OriginSportTokenSale is Ownable, Pausable {
   using SafeMath for uint;
 
   // Constant
@@ -34,7 +35,7 @@ contract OriginSportTokenSale is Ownable {
   OriginSportToken public token;
 
   // Modifiers
-  modifier inProgress()       { require (now < endTime && now >= startTime); _; }
+  modifier inProgress() { require (now < endTime && now >= startTime); _; }
 
   // Events
   event LogContribute(address indexed addr, uint etherAmount, uint orsAmount);
@@ -58,7 +59,7 @@ contract OriginSportTokenSale is Ownable {
    * @dev This function allows token to be purchased by directly
    * sending ether to this smart contract.
    */
-  function () external payable {
+  function () payable whenNotPaused external {
     buyTokens(msg.sender);
   }
 
@@ -66,7 +67,7 @@ contract OriginSportTokenSale is Ownable {
    * @dev low level token purchase 
    * @param _beneficiary Address performing the token purchase
    */
-  function buyTokens(address _beneficiary) payable inProgress public {
+  function buyTokens(address _beneficiary) payable whenNotPaused inProgress public {
     require(msg.value >= MINIMAL_CONTRIBUTION);
     require(!hardCapReached());
 
@@ -74,6 +75,7 @@ contract OriginSportTokenSale is Ownable {
     uint orsAmount = msg.value.mul(rate);
 
     token.transfer(_beneficiary, orsAmount);
+    forwardFunds();
 
     weiRaised = weiRaised.add(msg.value);
     tokenSold = tokenSold.add(orsAmount);
@@ -82,6 +84,14 @@ contract OriginSportTokenSale is Ownable {
     if (tokenSold > HARD_CAP) {
       finalizeSale();
     }
+  }
+
+  /**
+   * @dev indicate the address to store ETH
+   *
+   */
+  function forwardFunds() internal {
+    wallet.transfer(msg.value);
   }
 
   /**
@@ -110,7 +120,7 @@ contract OriginSportTokenSale is Ownable {
    * @dev execute the finalization process
    *
    */
-  function endSale() public {
+  function endSale() whenNotPaused public {
     require(!finalized);
     require(now > endTime);
     finalizeSale();

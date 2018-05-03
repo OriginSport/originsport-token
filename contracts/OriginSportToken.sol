@@ -18,7 +18,8 @@ contract OriginSportToken is StandardToken, Ownable, BurnableToken {
   uint   public constant INITIAL_SUPPLY = 300000000 * 10 ** uint(decimal);
 
   // Properties
-  uint public transferableStartTime;
+  bool public transferable = false;
+  mapping (address => bool) public whitelistedTransfer;
 
   // Filter invalid address
   modifier validAddress(address addr) {
@@ -27,26 +28,40 @@ contract OriginSportToken is StandardToken, Ownable, BurnableToken {
     _;
   }
 
-  modifier onlyWhenTransferEnabled() {
-    if (now < transferableStartTime) {
-      require(msg.sender == owner);
+  modifier onlyWhenTransferable() {
+    if (!transferable) {
+      require(whitelistedTransfer[msg.sender]);
     }
     _;
   }
 
   /**
    * @dev Constructor for Origin Sport Token, assigns the total supply to admin address 
-   * @param _transferableStartTime the time ors can transfer
-   * @param _admin the admin address of ors
+   * @param admin the admin address of ors
    */
-  function OriginSportToken(uint _transferableStartTime, address _admin) validAddress(_admin) public {
+  function OriginSportToken(address admin) validAddress(admin) public {
+    require(msg.sender != admin);
+    whitelistedTransfer[admin] = true;
     totalSupply_ = INITIAL_SUPPLY;
-    balances[_admin] = totalSupply_;
-    Transfer(address(0x0), _admin, totalSupply_);
+    balances[admin] = totalSupply_;
+    Transfer(address(0x0), admin, totalSupply_);
 
-    transferableStartTime = _transferableStartTime;
+    transferOwnership(admin);
+  }
 
-    transferOwnership(_admin);
+  /**
+   * @dev allow owner to add addresse to transfer tokens
+   * @param _address address Address to be added
+   */
+  function addWhitelistedTransfer(address _address) onlyOwner public {
+    whitelistedTransfer[_address] = true;
+  }
+
+  /**
+   * @dev allow all users to transfer tokens
+   */
+  function activeTransfer() onlyOwner public {
+    transferable = true;
   }
 
   /**
@@ -56,7 +71,7 @@ contract OriginSportToken is StandardToken, Ownable, BurnableToken {
    */
   function transfer(address _to, uint _value) public 
     validAddress(_to) 
-    onlyWhenTransferEnabled 
+    onlyWhenTransferable
     returns (bool) 
   {
     return super.transfer(_to, _value);
@@ -70,7 +85,7 @@ contract OriginSportToken is StandardToken, Ownable, BurnableToken {
    */
   function transferFrom(address _from, address _to, uint _value) public 
     validAddress(_to) 
-    onlyWhenTransferEnabled 
+    onlyWhenTransferable
     returns (bool) 
   {
     return super.transferFrom(_from, _to, _value);
@@ -80,7 +95,7 @@ contract OriginSportToken is StandardToken, Ownable, BurnableToken {
    * @dev overrides burn function with modifier to prevent burn while untransferable
    * @param _value The amount to be burned.
    */
-  function burn(uint _value) public onlyWhenTransferEnabled {
+  function burn(uint _value) public onlyWhenTransferable onlyOwner {
     super.burn(_value);
   }
 }

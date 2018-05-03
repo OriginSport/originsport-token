@@ -58,12 +58,30 @@ contract('OriginSportToken', function(accounts) {
     await assertRevert(tokenInstance.transfer(user2, amount, { from: user1 }))
   })
 
-  it('transfers: normal user can transfer correctly after enable transfer', async () => {
-    await addDaysOnEVM(35)
+  it('transfers: normal user can not transfer token when transferable is false', async () => {
+    await assertRevert(tokenInstance.transfer(user2, amount, { from: user1 }))
+  })
+
+  it('transfers: normal user can transfer correctly after add user1 to whitelist', async () => {
+    await tokenInstance.addWhitelistedTransfer(user1, { from: admin })
     const balance1 = await tokenInstance.balanceOf(user1)
-    await tokenInstance.transfer(user2, amount, { from: user1 })
     const balance2 = await tokenInstance.balanceOf(user2)
-    assert.equal(balance1.toNumber(), balance2.add(amount).toNumber())
+    await tokenInstance.transfer(user2, amount, { from: user1 })
+    const _balance1 = await tokenInstance.balanceOf(user1)
+    const _balance2 = await tokenInstance.balanceOf(user2)
+    assert.equal(balance2.add(amount).toNumber(), _balance2.toNumber())
+    assert.equal(balance1.toNumber(), _balance1.add(amount).toNumber())
+  })
+
+  it('transfers: normal user can transfer correctly after enable transfer', async () => {
+    await tokenInstance.activeTransfer({ from: admin })
+    const balance1 = await tokenInstance.balanceOf(user1)
+    const balance2 = await tokenInstance.balanceOf(user2)
+    await tokenInstance.transfer(user2, amount, { from: user1 })
+    const _balance1 = await tokenInstance.balanceOf(user1)
+    const _balance2 = await tokenInstance.balanceOf(user2)
+    assert.equal(balance2.add(amount).toNumber(), _balance2.toNumber())
+    assert.equal(balance1.toNumber(), _balance1.add(amount).toNumber())
   })
 
   it('transfers: should fail when trying to transfer greater than TOTAL_SUPPLY to user1', async () => {

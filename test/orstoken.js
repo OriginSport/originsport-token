@@ -4,12 +4,12 @@ const { addDaysOnEVM, assertRevert } = require('truffle-js-test-helper')
 const OriginSportToken = artifacts.require('./OriginSportToken.sol')
 
 contract('OriginSportToken', function(accounts) {
-  var owner = accounts[0]
-  var admin = accounts[1]
-  var user1 = accounts[2]
-  var user2 = accounts[3]
-  var user3 = accounts[4]
-  var user4 = accounts[5]
+  const owner = accounts[0]
+  const admin = accounts[1]
+  const user1 = accounts[2]
+  const user2 = accounts[3]
+  const user3 = accounts[4]
+  const user4 = accounts[5]
 
   const TOTAL_SUPPLY = 3e26
   const amount = 10**18

@@ -16,7 +16,7 @@ module.exports = function(deployer, network, accounts) {
  
   // Deploy with new OriginSportToken
   // OriginSportToken.new(publicSaleEndTime, accounts[1]).then(function(instance) {
-  deployer.deploy(OriginSportToken, publicSaleEndTime, accounts[1]).then(function(instance) {
+  deployer.deploy(OriginSportToken, accounts[1]).then(function(instance) {
     return deployer.deploy(OriginSportTokenSale, publicSaleStartTime, publicSaleEndTime, tokenAddress, walletAddress)
   })
 }

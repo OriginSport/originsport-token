@@ -9,6 +9,7 @@ contract('OriginSportToken', function(accounts) {
   var user1 = accounts[2]
   var user2 = accounts[3]
   var user3 = accounts[4]
+  var user4 = accounts[5]
 
   const TOTAL_SUPPLY = 3e26
   const amount = 10**18
@@ -16,7 +17,6 @@ contract('OriginSportToken', function(accounts) {
   beforeEach(function() {
     return OriginSportToken.deployed().then(function(instance) {
       tokenInstance = instance
-      addDaysOnEVM(60)
     })
   })
 
@@ -54,6 +54,18 @@ contract('OriginSportToken', function(accounts) {
     assert.equal(balance0, balance1 - amount)
   })
 
+  it('transfers: normal user can not transfer correctly', async () => {
+    await assertRevert(tokenInstance.transfer(user2, amount, { from: user1 }))
+  })
+
+  it('transfers: normal user can transfer correctly after enable transfer', async () => {
+    await addDaysOnEVM(35)
+    const balance1 = await tokenInstance.balanceOf(user1)
+    await tokenInstance.transfer(user2, amount, { from: user1 })
+    const balance2 = await tokenInstance.balanceOf(user2)
+    assert.equal(balance1.toNumber(), balance2.add(amount).toNumber())
+  })
+
   it('transfers: should fail when trying to transfer greater than TOTAL_SUPPLY to user1', async () => {
     await assertRevert(tokenInstance.transfer(user1, TOTAL_SUPPLY+1, { from: admin }))
   })
@@ -75,16 +87,16 @@ contract('OriginSportToken', function(accounts) {
 
   it('approvals: msg.sender approves user1 of 100 and withdraws 20 once', async () => {
     const balance = await tokenInstance.balanceOf(admin)
-    await tokenInstance.approve(user1, 100, { from: admin })
-    const balance2 = await tokenInstance.balanceOf(user2)
-    assert.equal(balance2.toNumber(), 0, 'balance2 not correct')
+    await tokenInstance.approve(user4, 100, { from: admin })
+    const balance3 = await tokenInstance.balanceOf(user3)
+    assert.equal(balance3.toNumber(), 0, 'balance3 not correct')
 
-    await tokenInstance.transferFrom(admin, user2, 20, { from: user1 })
-    const allowance = await tokenInstance.allowance(admin, user1)
-    assert.equal(allowance.toNumber(), 80, 'user1 balance not correct')
+    await tokenInstance.transferFrom(admin, user3, 20, { from: user4 })
+    const allowance = await tokenInstance.allowance(admin, user4)
+    assert.equal(allowance.toNumber(), 80, 'user4 balance not correct')
 
-    const _balance2 = await tokenInstance.balanceOf(user2)
-    assert.equal(_balance2.toNumber(), 20, 'user2 balance not correct after transfer')
+    const _balance3 = await tokenInstance.balanceOf(user3)
+    assert.equal(_balance3.toNumber(), 20, 'user3 balance not correct after transfer')
 
     const _balance = await tokenInstance.balanceOf(admin)
     assert.equal(_balance.add(20).toNumber(), balance, 'admin balance not correct')

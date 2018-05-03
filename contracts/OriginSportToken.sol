@@ -19,7 +19,6 @@ contract OriginSportToken is StandardToken, Ownable, BurnableToken {
 
   // Properties
   uint public transferableStartTime;
-  address public  tokenSaleContract;
 
   // Filter invalid address
   modifier validAddress(address addr) {
@@ -30,7 +29,7 @@ contract OriginSportToken is StandardToken, Ownable, BurnableToken {
 
   modifier onlyWhenTransferEnabled() {
     if (now < transferableStartTime) {
-      require(msg.sender == tokenSaleContract || msg.sender == owner);
+      require(msg.sender == owner);
     }
     _;
   }
@@ -40,13 +39,12 @@ contract OriginSportToken is StandardToken, Ownable, BurnableToken {
    * @param _transferableStartTime the time ors can transfer
    * @param _admin the admin address of ors
    */
-  function OriginSportToken(uint _transferableStartTime, address _admin) public {
+  function OriginSportToken(uint _transferableStartTime, address _admin) validAddress(_admin) public {
     totalSupply_ = INITIAL_SUPPLY;
-    balances[msg.sender] = totalSupply_;
-    Transfer(address(0x0), msg.sender, totalSupply_);
+    balances[_admin] = totalSupply_;
+    Transfer(address(0x0), _admin, totalSupply_);
 
     transferableStartTime = _transferableStartTime;
-    tokenSaleContract = msg.sender;
 
     transferOwnership(_admin);
   }

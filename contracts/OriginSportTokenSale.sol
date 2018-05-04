@@ -1,19 +1,15 @@
 pragma solidity 0.4.19;
 
 import 'zeppelin-solidity/contracts/math/SafeMath.sol';
-import 'zeppelin-solidity/contracts/ownership/Ownable.sol';
 import 'zeppelin-solidity/contracts/lifecycle/Pausable.sol';
 import './OriginSportToken.sol';
 
-contract OriginSportTokenSale is Ownable, Pausable {
+contract OriginSportTokenSale is Pausable {
   using SafeMath for uint;
 
   // Constant
   uint public constant decimal = 18;
-  uint public constant AVAILABLE_TOTAL_SUPPLY    = 300000000 * 18 ** uint(decimal);
-  uint public constant AVAILABLE_PUBLIC_SUPPLY   =  90000000 * 18 ** uint(decimal); // 30%
-  uint public constant AVAILABLE_PRIVATE_SUPPLY  =  45000000 * 18 ** uint(decimal); // 15%
-  uint public constant MINIMAL_CONTRIBUTION      =         2 * 10 ** uint(decimal-1);
+  uint public constant MINIMAL_CONTRIBUTION      = 2 * 10 ** uint(decimal-1);
 
   uint public constant GOAL                      = 18000 ether;
   uint public constant HARD_CAP                  = 30000 ether;
@@ -81,7 +77,7 @@ contract OriginSportTokenSale is Ownable, Pausable {
     tokenSold = tokenSold.add(orsAmount);
     LogContribute(_beneficiary, msg.value, orsAmount);
 
-    if (tokenSold > HARD_CAP) {
+    if (weiRaised > HARD_CAP) {
       finalizeSale();
     }
   }

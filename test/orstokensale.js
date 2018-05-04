@@ -1,4 +1,4 @@
-const { addDaysOnEVM, assertRevert } = require('truffle-js-test-helper')
+const { setTimestamp, addDaysOnEVM, assertRevert } = require('truffle-js-test-helper')
 
 const OriginSportToken = artifacts.require('./OriginSportToken.sol')
 const OriginSportTokenSale = artifacts.require('./OriginSportTokenSale.sol')
@@ -11,6 +11,7 @@ contract('OriginSportTokenSale Test', function(accounts) {
   const user3 = accounts[4]
   const wallet = accounts[9]
 
+  const now = new Date().getTime() / 1000 | 0
   const publicSaleStartTime = new Date("May 21 2018 14:00:00 GMT+0800").getTime() / 1000 | 0
   const publicSaleEndTime   = new Date("Jun 05 2018 14:00:00 GMT+0800").getTime() / 1000 | 0
   
@@ -23,9 +24,9 @@ contract('OriginSportTokenSale Test', function(accounts) {
 
   /* some build-in constant params to validate
   uint public constant decimal = 18
-  uint public constant AVAILABLE_TOTAL_SUPPLY    = 300000000 * 18 ** uint(decimal)
-  uint public constant AVAILABLE_PUBLIC_SUPPLY   =  90000000 * 18 ** uint(decimal) // 30%
-  uint public constant AVAILABLE_PRIVATE_SUPPLY  =  45000000 * 18 ** uint(decimal) // 15%
+  uint public constant AVAILABLE_TOTAL_SUPPLY    = 300000000 * 10 ** uint(decimal)
+  uint public constant AVAILABLE_PUBLIC_SUPPLY   =  90000000 * 10 ** uint(decimal) // 30%
+  uint public constant AVAILABLE_PRIVATE_SUPPLY  =  45000000 * 10 ** uint(decimal) // 15%
   uint public constant MINIMAL_CONTRIBUTION      =         2 * 10 ** uint(decimal-1)
 
   uint public constant GOAL                      = 18000 ether
@@ -45,105 +46,99 @@ contract('OriginSportTokenSale Test', function(accounts) {
       await tokenInstance.transfer(saleInstance.address, tokenForPublicSale, { from: admin })
     })
     
-    it("initial tokensale and check property is all correct", async () => {
+    it("check property is all correct", async () => {
       const startTime = await saleInstance.startTime()
       const endTime= await saleInstance.endTime()
       const _wallet = await saleInstance.wallet()
       const token = await saleInstance.token()
       const raised = await saleInstance.weiRaised()
       const sold = await saleInstance.tokenSold()
+      const paused = await saleInstance.paused()
 
-      assert.equal(startTime, publicSaleStartTime, "start time is not correct")
-      assert.equal(endTime, publicSaleEndTime, "end time is not correct")
+      assert.equal(startTime.toNumber(), publicSaleStartTime, "start time is not correct")
+      assert.equal(endTime.toNumber(), publicSaleEndTime, "end time is not correct")
       assert.equal(_wallet, wallet, "wallet address is not correct")
       assert.equal(token, tokenInstance.address, "token address is not correct")
       assert.equal(raised, 0, "raised amount is not correct")
       assert.equal(sold, 0, "sold amount is not correct")
+      assert.equal(paused, false, "paused is not correct")
+    })
+
+    it("contribute when token sale is not start will failed", async () => {
+      await assertRevert(saleInstance.sendTransaction({ from: user1, value: value }))
     })
   })
 
-  context("Check basic contribute function", async () => {
-    beforeEach(async () => {
+  context("Assume token sale is started and check basic contribute function", async () => {
+    before(async () => {
       tokenInstance = await OriginSportToken.new(admin, { from: owner })
       saleInstance  = await OriginSportTokenSale.new(publicSaleStartTime, publicSaleEndTime, tokenInstance.address, wallet, { from: owner })
       await tokenInstance.transfer(saleInstance.address, tokenForPublicSale, { from: admin })
       await tokenInstance.addWhitelistedTransfer(saleInstance.address, { from: admin })
+      await setTimestamp(publicSaleStartTime)
     })
     
-    it("contribute when token sale is not start will failed", async () => {
-      await assertRevert(saleInstance.sendTransaction({ from: user1, value:value }))
+    let weiRaised = 0
+    let tokenSold = 0
+
+    it("check this sale contract can transfer tokens", async () => {
+      const canTransfer = await tokenInstance.whitelistedTransfer(saleInstance.address)
+      assert.equal(canTransfer, true, "sale contract can not transfer tokens")
     })
 
     it("contribute when token sale is started will success", async () => {
-      await addDaysOnEVM(20)
       await saleInstance.sendTransaction({ from: user1, value: value })
+      weiRaised += value
+      tokenSold += value * rate1
       const raised = await saleInstance.weiRaised()
       const balance = await tokenInstance.balanceOf(user1)
-      assert.equal(raised.toNumber(), value, "raised eth is not correct")
-      assert.equal(balance.toNumber(), value * rate1, "user received ors amount is not correct")
+      assert.equal(raised.toNumber(), weiRaised, "raised eth is not correct")
+      assert.equal(balance.toNumber(), tokenSold, "user received ors amount is not correct")
     })
 
     it("contribute amount less than minimum will failed", async () => {
-      await addDaysOnEVM(20)
-      const value = 1 * 10**17
-      await assertRevert(saleInstance.sendTransaction({ from: user1, value: value }))
+      const minValue = 1 * 10**17
+      await assertRevert(saleInstance.sendTransaction({ from: user1, value: minValue }))
     })
 
     it("if contract paused, every contribute will failed", async () => {
-      await addDaysOnEVM(20)
       await saleInstance.pause({ from: owner })
+      const paused = await saleInstance.paused()
+      assert.equal(paused, true, "paused is not turn to true")
       await assertRevert(saleInstance.sendTransaction({ from: user2, value: value }))
     })
 
     it("after contract unpaused, contribute will return normal", async () => {
-      await addDaysOnEVM(20)
       await saleInstance.unpause({ from: owner })
       await saleInstance.sendTransaction({ from: user1, value: value })
+      weiRaised += value
+      tokenSold += value * rate1
       const raised = await saleInstance.weiRaised()
       const balance = await tokenInstance.balanceOf(user1)
-      assert.equal(raised.toNumber(), value, "raised eth is not correct")
-      assert.equal(balance.toNumber(), value * rate1, "user received ors amount is not correct")
+      assert.equal(raised.toNumber(), weiRaised, "raised eth is not correct")
+      assert.equal(balance.toNumber(), tokenSold, "user received ors amount is not correct")
+    })
+
+    it("check rate in first 5 days", async () => {
+      const rate = await saleInstance.getRate()
+      assert.equal(rate.toNumber(), rate1)
+    })
+
+    it("check rate in second 5 days", async () => {
+      await addDaysOnEVM(5)
+      const rate = await saleInstance.getRate()
+      assert.equal(rate.toNumber(), rate2)
+    })
+
+    it("check rate in last 5 days", async () => {
+      await addDaysOnEVM(5)
+      const rate = await saleInstance.getRate()
+      assert.equal(rate.toNumber(), rate3)
     })
 
     it("if sale has reached end time, contribute will failed", async() => {
-      await addDaysOnEVM(35)
+      await setTimestamp(publicSaleEndTime + 1)
       await assertRevert(saleInstance.sendTransaction({ from: user3, value: value }))
-    })
-  })
-
-  context("Check rate in differen periods", async () => {
-    beforeEach(async () => {
-      tokenInstance = await OriginSportToken.new(admin, { from: owner })
-      saleInstance  = await OriginSportTokenSale.new(publicSaleStartTime, publicSaleEndTime, tokenInstance.address, wallet, { from: owner })
-      await tokenInstance.transfer(saleInstance.address, tokenForPublicSale, { from: admin })
-      await tokenInstance.addWhitelistedTransfer(saleInstance.address, { from: admin })
-    })
-    
-    it("contribute in first 5 days rate is rate1", async () => {
-      await addDaysOnEVM(20)
-      await saleInstance.sendTransaction({ from: user1, value: value })
-      const raised = await saleInstance.weiRaised()
-      const balance = await tokenInstance.balanceOf(user1)
-      assert.equal(raised.toNumber(), value, "raised eth is not correct")
-      assert.equal(balance.toNumber(), value * rate1, "user received ors amount is not correct with rate2")
-    })
-
-    it("contribute in second 5 days rate is rate2", async () => {
-      await addDaysOnEVM(25)
-      await saleInstance.sendTransaction({ from: user1, value: value })
-      const raised = await saleInstance.weiRaised()
-      const balance = await tokenInstance.balanceOf(user1)
-      assert.equal(raised.toNumber(), value, "raised eth is not correct")
-      assert.equal(balance.toNumber(), value * rate2, "user received ors amount is not correct with rate2")
-    })
-
-    it("contribute in last 5 days rate is rate3", async () => {
-      await addDaysOnEVM(30)
-      await saleInstance.sendTransaction({ from: user1, value: value })
-      const raised = await saleInstance.weiRaised()
-      const balance = await tokenInstance.balanceOf(user1)
-      assert.equal(raised.toNumber(), value, "raised eth is not correct")
-      assert.equal(balance.toNumber(), value * rate3, "user received ors amount is not correct with rate3")
     })
   })
 })

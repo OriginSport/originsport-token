@@ -84,7 +84,6 @@ contract OriginSportTokenSale is Pausable {
 
   /**
    * @dev indicate the address to store ETH
-   *
    */
   function forwardFunds() internal {
     wallet.transfer(msg.value);
@@ -106,7 +105,6 @@ contract OriginSportTokenSale is Pausable {
 
   /**
    * @dev return true if the hard cap is reached.
-   *
    */
   function hardCapReached() public view returns (bool) {
     return weiRaised >= HARD_CAP;
@@ -114,7 +112,6 @@ contract OriginSportTokenSale is Pausable {
 
   /**
    * @dev execute the finalization process
-   *
    */
   function endSale() whenNotPaused public {
     require(!finalized);
@@ -124,7 +121,6 @@ contract OriginSportTokenSale is Pausable {
 
   /**
    * @dev finalize the token sale
-   *
    */
   function finalizeSale() internal {
     finalized = true;

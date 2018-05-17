@@ -31,8 +31,8 @@ contract('OriginSportToken', function(accounts) {
       const name = await tokenInstance.name()
       assert.equal(name, 'Origin Sport Token')
 
-      const decimal = await tokenInstance.decimal()
-      assert.equal(decimal.toNumber(), 18)
+      const decimals = await tokenInstance.decimals()
+      assert.equal(decimals.toNumber(), 18)
 
       const symbol = await tokenInstance.symbol()
       assert.equal(symbol, 'ORS')

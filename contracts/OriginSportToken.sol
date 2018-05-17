@@ -14,7 +14,7 @@ contract OriginSportToken is StandardToken, Ownable, BurnableToken {
   // Constants
   string public constant name           = 'OriginSport Token';
   string public constant symbol         = 'ORS';
-  uint   public constant decimals        = 18;
+  uint   public constant decimals       = 18;
   uint   public constant INITIAL_SUPPLY = 300000000 * 10 ** uint(decimals);
 
   // Properties

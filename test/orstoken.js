@@ -29,7 +29,7 @@ contract('OriginSportToken', function(accounts) {
       assert.equal(totalSupply, TOTAL_SUPPLY, "total supply should have 300 million tokens")
       
       const name = await tokenInstance.name()
-      assert.equal(name, 'Origin Sport Token')
+      assert.equal(name, 'OriginSport Token')
 
       const decimals = await tokenInstance.decimals()
       assert.equal(decimals.toNumber(), 18)
